@@ -25,8 +25,9 @@ public class Account {
     private Double balance;
 
     @Column(name = "active")
-    private  Boolean active;
+    private Boolean active;
 
-    @Column(name = "referralCode")
-    private String referralCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
 }

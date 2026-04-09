@@ -1,8 +1,13 @@
 package com.minibank.domain.service;
 
+import com.minibank.api.exception.CouponLimitReachedException;
+import com.minibank.api.exception.CouponNotFoundException;
 import com.minibank.api.exception.DuplicateCpfException;
 import com.minibank.domain.entities.Account;
+import com.minibank.domain.entities.Coupon;
 import com.minibank.domain.repository.AccountRepository;
+import com.minibank.domain.repository.CouponRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,33 +15,42 @@ import java.util.List;
 @Service
 public class AccountService {
 
-    final String CODE = "CORA10";
-
     private final AccountRepository accountRepository;
+    private final CouponRepository couponRepository;
 
-    public AccountService(AccountRepository accountRepository) {
+    public AccountService(AccountRepository accountRepository, CouponRepository couponRepository) {
         this.accountRepository = accountRepository;
+        this.couponRepository = couponRepository;
     }
 
-    public Account saveAccount(Account account) {
+    @Transactional
+    public Account saveAccount(Account account, String referralCode) {
         if (accountRepository.findByCpf(account.getCpf()).isPresent()) {
             throw new DuplicateCpfException(account.getCpf());
         }
-        if (account.getReferralCode() == null) {
-            account.setBalance(0.0);
-        } else if  (CODE.equals(account.getReferralCode())) {
-            account.setBalance(10.0);
-        } else {
-            throw new IllegalArgumentException("Invalid referral code: " + account.getReferralCode());
-        }
-
+        applyCoupon(account, referralCode);
         account.setActive(true);
         accountRepository.saveAndFlush(account);
-
         return account;
     }
 
-    public List<Account> getAll(){
+    private void applyCoupon(Account account, String referralCode) {
+        if (referralCode == null) {
+            account.setBalance(0.0);
+            return;
+        }
+        Coupon coupon = couponRepository.findByCode(referralCode)
+                .orElseThrow(() -> new CouponNotFoundException(referralCode));
+
+        if (!coupon.hasAvailableUses()) {
+            throw new CouponLimitReachedException(referralCode);
+        }
+        coupon.use();
+        account.setBalance(coupon.getBonusAmount());
+        account.setCoupon(coupon);
+    }
+
+    public List<Account> getAll() {
         return accountRepository.findAll();
     }
 
@@ -47,5 +61,4 @@ public class AccountService {
     public Account getAccountByCPF(String cpf) {
         return accountRepository.findByCpf(cpf).orElse(null);
     }
-
 }

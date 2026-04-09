@@ -1,7 +1,7 @@
 # Minibank API
 
-A small banking backend used as a technical exercise.  
-The goal is to expose a simple REST API to **create** and **list** bank accounts, using **Spring Boot**, **Java 21**, and an **H2 in‑memory database**.
+A small banking backend used as a technical exercise.
+The goal is to expose a simple REST API to **create** and **list** bank accounts, with a **coupon system** for initial balance bonuses, using **Spring Boot**, **Java 21**, and an **H2 in-memory database**.
 
 ## Stack & Requirements
 
@@ -17,8 +17,7 @@ Default HTTP port: **`8080`**
 ### 1. Prerequisites
 
 - **Java**: 21+
-- **Maven**: 3.8+ (or use Maven wrapper, if present)
-- **Optional**: Docker (if you want to run external DBs or other services)
+- **Maven**: 3.8+
 
 ### 2. Clone the Repository
 
@@ -33,165 +32,171 @@ cd mini-bank
 mvn spring-boot:run
 ```
 
-The API will be available at:
+The API will be available at `http://localhost:8080`.
 
-- `http://localhost:8080`
+On startup, the application seeds the coupon `CORA10` automatically if it does not exist in the database.
 
 ### 4. H2 Console
-
-H2 is configured as an in-memory database.
 
 - URL: `http://localhost:8080/h2-console`
 - JDBC URL: `jdbc:h2:mem:testdb`
 - Username: `sa`
 - Password: (empty)
 
-You can use the console to inspect the `ACCOUNT` table during development.
+Tables available for inspection: `ACCOUNT`, `COUPON`.
 
 ## Building & Running Tests
-
-### Run all tests
 
 ```bash
 mvn test
 ```
 
-This executes:
+Test classes:
 
-- Unit tests for:
-  - `AccountMapper`
-  - `AccountService`
+| Class | Scope |
+|---|---|
+| `AccountMapperTest` | Unit - DTO mapping |
+| `AccountServiceTest` | Unit - business rules |
+| `CouponTest` | Unit - coupon entity methods |
+| `GlobalExceptionHandlerTest` | Unit - HTTP error responses |
 
-## API Overview
+## API
 
-### 1. Create account
+### POST /accounts - Create account
 
-- **Method**: `POST`
-- **URL**: `/accounts`
-- **Request body**:
+**Request body:**
 
 ```json
 {
-  "name": "User Name",
-  "cpf": "12345678901"
+  "name": "Maria Silva",
+  "cpf": "98765432100",
+  "referralCode": "CORA10"
 }
 ```
 
-- **Success response**:
-  - Status: **`201 Created`**
-  - Body: currently **empty** (can be extended to return the created account and/or `Location` header)
+- `name`: required
+- `cpf`: required, must be unique
+- `referralCode`: optional - when provided, applies the coupon bonus to the initial balance
 
-- **Validation rules**:
-  - `name`: required (`@NotBlank`)
-  - `cpf`: required (`@NotBlank`)
-  - `cpf`: must be **unique** (no other account with the same CPF)
+**Success response - `201 Created`:**
 
-- **Error cases**:
-  - Missing/blank fields → `400 Bad Request` with a structured error payload.
-  - CPF already registered → `409 Conflict` with a structured error payload.
+```json
+{
+  "id": 1,
+  "name": "Maria Silva",
+  "cpf": "98765432100",
+  "balance": 10.0,
+  "active": true
+}
+```
 
-### 2. List accounts
+**Error responses:**
 
-- **Method**: `GET`
-- **URL**: `/accounts`
-- **Success response**:
-  - Status: **`200 OK`**
-  - Body: JSON array of account DTOs:
+| Situation | Status | Description |
+|---|---|---|
+| Missing/blank fields | `400 Bad Request` | Validation failed |
+| CPF already registered | `409 Conflict` | Duplicate CPF |
+| Coupon not found | `422 Unprocessable Entity` | Invalid referral code |
+| Coupon limit reached | `422 Unprocessable Entity` | Coupon exhausted |
+| Concurrent coupon conflict | `409 Conflict` | Race condition on coupon update - retry the request |
+
+**Error response body:**
+
+```json
+{
+  "status": 422,
+  "error": "Unprocessable Entity",
+  "message": "Coupon 'CORA10' has reached its usage limit.",
+  "path": "/accounts",
+  "timestamp": "2026-04-08T12:00:00Z"
+}
+```
+
+---
+
+### GET /accounts - List accounts
+
+**Success response - `200 OK`:**
 
 ```json
 [
   {
     "id": 1,
-    "name": "User Name",
-    "cpf": "12345678901"
+    "name": "Maria Silva",
+    "cpf": "98765432100",
+    "balance": 10.0,
+    "active": true
   }
 ]
 ```
 
-### CORS
+---
 
-The controller is annotated with `@CrossOrigin`, allowing the React frontend to call this API from a different origin.
-For a real production system you would restrict origins, but for the exercise the configuration is intentionally permissive.
+### Coupon: CORA10
+
+The coupon `CORA10` is seeded on startup with a bonus of **R$ 10.00** and a usage limit of **2 uses**.
+Accounts created without a coupon start with `balance: 0.0`.
 
 ## Architecture
 
-The project follows a layered architecture with clear separation between **API**, **domain**, and **infrastructure** concerns.
+The project follows a layered architecture with clear separation between API, domain, and infrastructure concerns.
 
 ### Package structure
 
 - `com.minibank`
-  - `MinibankApplication` – Spring Boot main class.
+  - `MinibankApplication` - Spring Boot entry point.
 - `com.minibank.api`
-  - `controller` – REST controllers (`AccountController`).
-  - `request` – Input DTOs from the outside world (`AccountRequest`).
-  - `response` – Output DTOs (`AccountResponse`).
-  - `mapper` – Mapping between API DTOs and domain entities (`AccountMapper`).
-  - `exception` – API‑level exceptions and global exception handler (if present).
+  - `controller` - REST controllers (`AccountController`).
+  - `request` - Input DTOs (`AccountRequest`).
+  - `response` - Output DTOs (`AccountResponse`, `ErrorResponse`).
+  - `mapper` - DTO-to-entity mapping (`AccountMapper`).
+  - `exception` - Business exceptions and global handler (`GlobalExceptionHandler`).
 - `com.minibank.domain`
-  - `entitys` – JPA entities (`Account`).
-  - `repository` – Spring Data JPA repositories (`AccountRepository`).
-  - `service` – Business services (`AccountService`).
+  - `entities` - JPA entities (`Account`, `Coupon`).
+  - `repository` - Spring Data repositories (`AccountRepository`, `CouponRepository`).
+  - `service` - Business logic (`AccountService`).
 - `com.minibank.config`
-  - Beans and cross‑cutting configuration (e.g. `ModelMapper` bean).
+  - `AppConfig` - `ModelMapper` bean and global CORS configuration.
+  - `DataLoader` - Seeds initial data on startup.
 
 ## Technical Decisions
 
 ### 1. H2 in-memory database
 
-- **Why**: Fast, zero‑setup database perfectly suitable for a coding exercise.
-- **Benefit**: No external dependency; the backend runs with a single `mvn spring-boot:run`.
-- **Trade-off**: Data is lost on restart. For production, a persistent relational DB (e.g., Postgres) would be used.
+- **Why**: Zero-setup, no external dependency - runs with a single `mvn spring-boot:run`.
+- **Trade-off**: Data is lost on restart. PostgreSQL config is already present in `application.properties`, commented out, for when a persistent database is needed.
 
 ### 2. Layered architecture (Controller → Service → Repository)
 
-- **Why**:
-  - Keep business rules in the **service layer**.
-  - Keep controllers thin and focused purely on HTTP (status codes, DTOs, etc.).
-  - Use repositories only for persistence concerns.
-- **Benefit**:
-  - Easier to test each layer in isolation (unit tests for services and mappers, integration tests for controllers).
-  - Clear separation of concerns; easier to extend during the interview.
+- Controllers are thin: only HTTP concerns (status codes, DTOs).
+- Business rules live in the service layer, independent of HTTP.
+- Each layer is testable in isolation.
 
 ### 3. DTOs and ModelMapper
 
-- **Why**:
-  - Avoid exposing JPA entities directly as API contracts (better encapsulation).
-  - Keep mapping logic centralized in `AccountMapper`.
-  - Use ModelMapper to reduce boilerplate for simple property‑to‑property mappings.
-- **Trade-off**:
-  - Another dependency, but trivial to replace with manual mapping if desired.
+- JPA entities are never exposed directly as API contracts.
+- `AccountMapper` centralizes all mapping logic.
+- ModelMapper reduces boilerplate for property-to-property mappings.
 
-### 4. Validation with Jakarta Bean Validation
+### 4. Coupon system
 
-- **Why**:
-  - Declarative and concise way to validate request payloads.
-  - Standard approach in Spring Boot applications.
-- **Implementation**:
-  - `@NotBlank` on `name` and `cpf`.
-  - `@Valid` on controller method parameters.
-  - A global exception handler (optional) to transform validation errors into a consistent JSON shape.
+- Coupons are database entities (`Coupon`) with a code, usage limit, usage counter, and bonus amount.
+- The service validates existence and availability before applying a coupon.
+- `CORA10` is seeded by `DataLoader` on every startup.
 
-### 5. Duplicate CPF rule at the service layer
+### 5. Transactional account creation with optimistic locking
 
-- **Why**:
-  - Business rule (“CPF must be unique”) belongs in the **domain/service layer**, not directly in the controller.
-  - Makes the rule testable independent of HTTP.
-- **Implementation**:
-  - `AccountService.saveAccount` checks `AccountRepository.findByCpf`.
-  - Throws `DuplicateCpfException` when necessary.
-  - Controller/exception handler is responsible for mapping that exception to `409 Conflict`.
+- `AccountService.saveAccount` is annotated with `@Transactional`: if any step fails, the entire operation rolls back - including the coupon usage counter increment.
+- The `Coupon` entity uses `@Version` for optimistic locking. Concurrent requests for the same coupon are detected by Hibernate and rejected with a `409 Conflict`, preventing double-counting.
 
-### 6. Testing strategy
+### 6. Global CORS configuration
 
-- **Unit tests**:
-  - For **mappers**: ensure `AccountRequest` and `Account`/`AccountResponse` mapping is correct (and that collections are mapped properly).
-  - For **service**:
-    - Save account with non‑existing CPF.
-    - Throw when CPF is already registered.
-    - Fetch all accounts.
-    - Fetch by CPF (found and not found).
-- **Integration tests (optional / environment-dependent)**:
-  - Start full Spring Boot context with embedded Tomcat and H2.
-  - Use RestAssured to test HTTP behavior end‑to‑end (status codes and JSON payloads).
+- Configured via `WebMvcConfigurer` in `AppConfig`, applying to all endpoints.
+- Currently permissive (`allowedOrigins("*")`) for development purposes.
+- For production, replace with the specific frontend origin. Note: `allowedOrigins("*")` is incompatible with `allowCredentials(true)`.
 
-This separation helps catch regressions quickly and demonstrates how the system behaves both at the unit and at the API level.
+### 7. Global exception handler
+
+- `GlobalExceptionHandler` (`@RestControllerAdvice`) maps all business exceptions to structured HTTP responses.
+- All error responses share the same `ErrorResponse` shape: `status`, `error`, `message`, `path`, `timestamp`.
+- Validation errors additionally include a list of field-level details.

@@ -8,7 +8,7 @@ public class DuplicateCpfException extends RuntimeException {
     private final String cpf;
 
     public DuplicateCpfException(String cpf) {
-        super("There is already an account registered with the CPF informed: " + cpf);
+        super("An account with CPF '" + cpf + "' is already registered.");
         this.cpf = cpf;
     }
 }

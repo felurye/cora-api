@@ -16,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/accounts")
 @RequiredArgsConstructor
-@CrossOrigin
 public class AccountController {
 
     private final AccountService accountService;
@@ -24,7 +23,7 @@ public class AccountController {
 
     @PostMapping
     public ResponseEntity<AccountResponse> create(@Valid @RequestBody AccountRequest request) {
-        Account account = accountService.saveAccount(mapper.toEntity(request));
+        Account account = accountService.saveAccount(mapper.toEntity(request), request.getReferralCode());
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(account));
     }
 
