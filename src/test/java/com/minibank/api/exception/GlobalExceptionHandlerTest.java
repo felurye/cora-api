@@ -2,6 +2,9 @@ package com.minibank.api.exception;
 
 import com.minibank.api.response.ErrorResponse;
 import com.minibank.domain.entities.Coupon;
+import com.minibank.domain.exception.CouponLimitReachedException;
+import com.minibank.domain.exception.CouponNotFoundException;
+import com.minibank.domain.exception.DuplicateCpfException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,8 +15,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,6 +94,27 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getStatus()).isEqualTo(409);
         assertThat(response.getBody().getMessage()).contains("try again");
+        assertThat(response.getBody().getPath()).isEqualTo("/accounts");
+    }
+
+    @Test
+    @DisplayName("Should return 400 with field errors when request body is invalid")
+    void handleValidation_returns400() {
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                new FieldError("accountRequest", "name", "The name is required.")
+        ));
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+
+        ResponseEntity<ErrorResponse> response = handler.handleValidation(ex, request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(400);
+        assertThat(response.getBody().getErrors()).hasSize(1);
+        assertThat(response.getBody().getErrors().get(0).getField()).isEqualTo("name");
+        assertThat(response.getBody().getErrors().get(0).getMessage()).isEqualTo("The name is required.");
         assertThat(response.getBody().getPath()).isEqualTo("/accounts");
     }
 }

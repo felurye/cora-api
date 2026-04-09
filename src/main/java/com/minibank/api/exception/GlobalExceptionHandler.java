@@ -1,6 +1,9 @@
 package com.minibank.api.exception;
 
 import com.minibank.api.response.ErrorResponse;
+import com.minibank.domain.exception.CouponLimitReachedException;
+import com.minibank.domain.exception.CouponNotFoundException;
+import com.minibank.domain.exception.DuplicateCpfException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,15 +24,7 @@ public class GlobalExceptionHandler {
             DuplicateCpfException ex,
             HttpServletRequest request
     ) {
-        ErrorResponse body = ErrorResponse.builder()
-                .status(HttpStatus.CONFLICT.value())
-                .error(HttpStatus.CONFLICT.getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .timestamp(Instant.now())
-                .build();
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
     @ExceptionHandler(CouponNotFoundException.class)
@@ -37,15 +32,7 @@ public class GlobalExceptionHandler {
             CouponNotFoundException ex,
             HttpServletRequest request
     ) {
-        ErrorResponse body = ErrorResponse.builder()
-                .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
-                .error(HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .timestamp(Instant.now())
-                .build();
-
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body);
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
     }
 
     @ExceptionHandler(CouponLimitReachedException.class)
@@ -53,15 +40,7 @@ public class GlobalExceptionHandler {
             CouponLimitReachedException ex,
             HttpServletRequest request
     ) {
-        ErrorResponse body = ErrorResponse.builder()
-                .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
-                .error(HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .timestamp(Instant.now())
-                .build();
-
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body);
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
@@ -69,15 +48,9 @@ public class GlobalExceptionHandler {
             ObjectOptimisticLockingFailureException ex,
             HttpServletRequest request
     ) {
-        ErrorResponse body = ErrorResponse.builder()
-                .status(HttpStatus.CONFLICT.value())
-                .error(HttpStatus.CONFLICT.getReasonPhrase())
-                .message("The coupon was updated by another request at the same time. Please try again.")
-                .path(request.getRequestURI())
-                .timestamp(Instant.now())
-                .build();
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        return build(HttpStatus.CONFLICT,
+                "The coupon was updated by another request at the same time. Please try again.",
+                request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -104,5 +77,16 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
-}
 
+    private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {
+        ErrorResponse body = ErrorResponse.builder()
+                .status(status.value())
+                .error(status.getReasonPhrase())
+                .message(message)
+                .path(request.getRequestURI())
+                .timestamp(Instant.now())
+                .build();
+
+        return ResponseEntity.status(status).body(body);
+    }
+}

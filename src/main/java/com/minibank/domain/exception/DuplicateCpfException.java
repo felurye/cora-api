@@ -1,4 +1,4 @@
-package com.minibank.api.exception;
+package com.minibank.domain.exception;
 
 import lombok.Getter;
 

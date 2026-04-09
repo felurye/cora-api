@@ -1,10 +1,10 @@
 package com.minibank.domain.service;
 
-import com.minibank.api.exception.CouponLimitReachedException;
-import com.minibank.api.exception.CouponNotFoundException;
-import com.minibank.api.exception.DuplicateCpfException;
 import com.minibank.domain.entities.Account;
 import com.minibank.domain.entities.Coupon;
+import com.minibank.domain.exception.CouponLimitReachedException;
+import com.minibank.domain.exception.CouponNotFoundException;
+import com.minibank.domain.exception.DuplicateCpfException;
 import com.minibank.domain.repository.AccountRepository;
 import com.minibank.domain.repository.CouponRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -128,52 +128,52 @@ class AccountServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getName()).isEqualTo("A");
         assertThat(result.get(1).getName()).isEqualTo("B");
-        verify(accountRepository, times(1)).findAll();
+        verify(accountRepository).findAll();
     }
 
     @Test
-    @DisplayName("Should return an account when ID exists")
+    @DisplayName("Should return account wrapped in Optional when ID exists")
     void getAccount_found() {
         Account account = Account.builder().id(1).name("X").cpf("123").build();
         when(accountRepository.findById(1)).thenReturn(Optional.of(account));
 
-        Account result = accountService.getAccount(1);
+        Optional<Account> result = accountService.getAccount(1);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(1);
-        verify(accountRepository, times(1)).findById(1);
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(1);
+        verify(accountRepository).findById(1);
     }
 
     @Test
-    @DisplayName("Should return null when ID does not exist")
+    @DisplayName("Should return empty Optional when ID does not exist")
     void getAccount_notFound() {
         when(accountRepository.findById(99)).thenReturn(Optional.empty());
 
-        Account result = accountService.getAccount(99);
+        Optional<Account> result = accountService.getAccount(99);
 
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
-    @DisplayName("Should return an account when CPF exists")
+    @DisplayName("Should return account wrapped in Optional when CPF exists")
     void getAccountByCPF_found() {
         Account account = Account.builder().id(1).name("X").cpf("123").build();
         when(accountRepository.findByCpf("123")).thenReturn(Optional.of(account));
 
-        Account result = accountService.getAccountByCPF("123");
+        Optional<Account> result = accountService.getAccountByCPF("123");
 
-        assertThat(result).isNotNull();
-        assertThat(result.getCpf()).isEqualTo("123");
-        verify(accountRepository, times(1)).findByCpf("123");
+        assertThat(result).isPresent();
+        assertThat(result.get().getCpf()).isEqualTo("123");
+        verify(accountRepository).findByCpf("123");
     }
 
     @Test
-    @DisplayName("Should return null when CPF does not exist")
+    @DisplayName("Should return empty Optional when CPF does not exist")
     void getAccountByCPF_notFound() {
         when(accountRepository.findByCpf("999")).thenReturn(Optional.empty());
 
-        Account result = accountService.getAccountByCPF("999");
+        Optional<Account> result = accountService.getAccountByCPF("999");
 
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 }

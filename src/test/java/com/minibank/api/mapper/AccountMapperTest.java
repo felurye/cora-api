@@ -33,6 +33,7 @@ class AccountMapperTest {
         assertThat(account.getName()).isEqualTo("Maria Silva");
         assertThat(account.getCpf()).isEqualTo("12345678901");
         assertThat(account.getId()).isNull();
+        assertThat(account.getCoupon()).isNull();
     }
 
     @Test
@@ -42,6 +43,8 @@ class AccountMapperTest {
                 .id(1)
                 .name("João Santos")
                 .cpf("98765432100")
+                .balance(10.0)
+                .active(true)
                 .build();
 
         AccountResponse response = mapper.toResponse(account);
@@ -50,14 +53,16 @@ class AccountMapperTest {
         assertThat(response.getId()).isEqualTo(1);
         assertThat(response.getName()).isEqualTo("João Santos");
         assertThat(response.getCpf()).isEqualTo("98765432100");
+        assertThat(response.getBalance()).isEqualTo(10.0);
+        assertThat(response.getActive()).isTrue();
     }
 
     @Test
     @DisplayName("Should map a list of Account to a list of AccountResponse")
     void toResponseList() {
         List<Account> accounts = List.of(
-                Account.builder().id(1).name("A").cpf("111").build(),
-                Account.builder().id(2).name("B").cpf("222").build()
+                Account.builder().id(1).name("A").cpf("111").balance(0.0).active(true).build(),
+                Account.builder().id(2).name("B").cpf("222").balance(0.0).active(true).build()
         );
 
         List<AccountResponse> responses = mapper.toResponseList(accounts);
