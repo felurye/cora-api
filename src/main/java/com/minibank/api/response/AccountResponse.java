@@ -13,4 +13,6 @@ public class AccountResponse {
     private Integer id;
     private String name;
     private String cpf;
+    private Double balance;
+    private Boolean active;
 }

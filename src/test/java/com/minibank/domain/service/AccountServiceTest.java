@@ -1,7 +1,7 @@
 package com.minibank.domain.service;
 
 import com.minibank.api.exception.DuplicateCpfException;
-import com.minibank.domain.entitys.Account;
+import com.minibank.domain.entities.Account;
 import com.minibank.domain.repository.AccountRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

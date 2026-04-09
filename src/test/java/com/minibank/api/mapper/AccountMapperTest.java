@@ -2,7 +2,7 @@ package com.minibank.api.mapper;
 
 import com.minibank.api.request.AccountRequest;
 import com.minibank.api.response.AccountResponse;
-import com.minibank.domain.entitys.Account;
+import com.minibank.domain.entities.Account;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ class AccountMapperTest {
     @Test
     @DisplayName("Should map AccountRequest to Account")
     void toEntity() {
-        AccountRequest request = new AccountRequest("Maria Silva", "12345678901");
+        AccountRequest request = new AccountRequest("Maria Silva", "12345678901", null);
 
         Account account = mapper.toEntity(request);
 

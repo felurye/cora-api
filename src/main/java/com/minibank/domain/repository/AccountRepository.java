@@ -1,6 +1,6 @@
 package com.minibank.domain.repository;
 
-import com.minibank.domain.entitys.Account;
+import com.minibank.domain.entities.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

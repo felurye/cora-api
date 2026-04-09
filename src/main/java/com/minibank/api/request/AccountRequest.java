@@ -17,4 +17,6 @@ public class AccountRequest {
 
     @NotBlank(message = "The cpf is required.")
     private String cpf;
+
+    private String referralCode;
 }

@@ -2,7 +2,7 @@ package com.minibank.api.mapper;
 
 import com.minibank.api.request.AccountRequest;
 import com.minibank.api.response.AccountResponse;
-import com.minibank.domain.entitys.Account;
+import com.minibank.domain.entities.Account;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;

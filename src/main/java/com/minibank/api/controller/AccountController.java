@@ -3,6 +3,7 @@ package com.minibank.api.controller;
 import com.minibank.api.mapper.AccountMapper;
 import com.minibank.api.request.AccountRequest;
 import com.minibank.api.response.AccountResponse;
+import com.minibank.domain.entities.Account;
 import com.minibank.domain.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +23,9 @@ public class AccountController {
     private final AccountMapper mapper;
 
     @PostMapping
-    public ResponseEntity<Void> create(@Valid @RequestBody AccountRequest request) {
-        accountService.saveAccount(mapper.toEntity(request));
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<AccountResponse> create(@Valid @RequestBody AccountRequest request) {
+        Account account = accountService.saveAccount(mapper.toEntity(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(account));
     }
 
     @GetMapping

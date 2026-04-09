@@ -1,4 +1,4 @@
-package com.minibank.domain.entitys;
+package com.minibank.domain.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,4 +20,13 @@ public class Account {
 
     @Column(name = "name")
     private String name;
+
+    @Column(name = "balance")
+    private Double balance;
+
+    @Column(name = "active")
+    private  Boolean active;
+
+    @Column(name = "referralCode")
+    private String referralCode;
 }
